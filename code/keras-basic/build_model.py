@@ -53,7 +53,7 @@ def sequential_and_padding(t, sentences, cover_len):
     sequences = tf.keras.preprocessing.sequence.pad_sequences(sequences, maxlen=cover_len, padding='post')
     return sequences
 
-def sequences_reformat(t, sequences, as_string=True, padding_char='.'):
+def sequences_reformat(t, sequences, as_string=True, padding_char=''):
     d = dict( [i,word] for word, i in t.word_index.items() )
     emb = []
     for indx,s in enumerate(sequences):
@@ -219,9 +219,7 @@ def build_model(X, Y, model_name, hyper_params, metrics=METRICS):
 def build_model_bert(Y, hyper_params, metrics=METRICS):
     import pickle
     # bert_default_32.pickle, bert_no_pooling_32.pickle
-    pickle_in = open( os.path.join(root_folder, 'data/pickle/', hyper_params['embedding_file']),"rb")
-    X = pickle.load(pickle_in)
-    pickle_in.close()
+    X = read_pickle(hyper_params['embedding_file'])
 
 
     f1,acc,auc,preci,recall = [],[],[],[],[]

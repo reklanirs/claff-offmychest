@@ -24,6 +24,11 @@ def read_data(data_path, clean=True, DEBUG = False):
         X,Y = clean_data(X,Y)
     return X,Y
 
+def read_pickle(filename):
+    with open( os.path.join(root_folder, 'data/pickle/', filename),"rb") as pickle_in:
+        ret = pickle.load(pickle_in)
+    return ret
+
 '''
 def read_hyper_params(filename):
     with open(filename, 'r') as f:
