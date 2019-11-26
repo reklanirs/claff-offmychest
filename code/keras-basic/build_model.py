@@ -280,3 +280,35 @@ def build_model_bert_dual(Y, hyper_params, metrics=METRICS):
     r1,r2,r3,r4,r5 = test_model(y_test, y_pred, name=hyper_params['embedding_file'])
     f1.append(r1);acc.append(r2);auc.append(r3);preci.append(r4);recall.append(r5)
     return model, X_train, X_test, y_train, y_test, y_pred, history
+
+
+def build_model_triple(Y, hyper_params, metrics=METRICS):
+    import pickle
+    # bert_default_32.pickle, bert_no_pooling_32.pickle
+    bertx = read_pickle('bert_no_pooling_34_12860x34x1024.pickle')
+    elmox = read_pickle('elmo_34_12860x34x1024.pickle')
+    glovex = read_pickle('glove_34_12860x34x200.pickle')
+
+
+    f1,acc,auc,preci,recall = [],[],[],[],[]
+    from sklearn.model_selection import train_test_split
+    bertx_train, bertx_test, elmox_train, elmox_test, glovex_train, glovex_test, y_train, y_test = train_test_split(bertx, elmox, glovex, Y, test_size=0.33, random_state=42)
+
+    model = keras_bert_triple(hyper_params)
+    for i in model.layers:
+        if 'trainable' in i.name:
+            i.trainable = True
+    model.compile(optimizer=Adam(lr=hyper_params['learning_rate']), loss=hyper_params['loss'], metrics=metrics) #['acc',f1_m,precision_m, recall_m]
+    print(model.summary())
+    print('y_train.shape: {}'.format(y_train.shape))
+    history = model.fit(x=[bertx_train, elmox_train, glovex_train], y=[ i.squeeze() for i in y_train.T], 
+                    epochs=hyper_params['epochs'], 
+                    batch_size=hyper_params['batch_size'],
+                    class_weight=[dict(enumerate(class_weight.compute_class_weight('balanced', [0,1], i.squeeze()))) for i in y_train.T],
+                    validation_data=([bertx_test, elmox_test, glovex_test], [ i.squeeze() for i in y_test.T]) # validation_split=0.25
+                    )
+    y_pred = model.predict([bertx_test, elmox_test, glovex_test])
+    r1,r2,r3,r4,r5 = test_model(y_test, y_pred, name=hyper_params['embedding_file'])
+    f1.append(r1);acc.append(r2);auc.append(r3);preci.append(r4);recall.append(r5)
+    return model, bertx_train, bertx_test, elmox_train, elmox_test, glovex_train, glovex_test, y_train, y_test, y_pred, history
+

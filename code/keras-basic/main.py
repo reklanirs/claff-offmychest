@@ -67,11 +67,13 @@ def main():
 
     # model, X_test, y_test, y_pred, history = build_model(X, Y, model_name = 'keras_elmo', hyper_params=hyper_params, metrics=['accuracy',precision_m, recall_m, f1_m,])
 
-    model, X_train, X_test, y_train, y_test, y_pred, history = build_model_bert(Y, hyper_params_bert, metrics=[precision_m, recall_m, f1_m,])
+    # model, X_train, X_test, y_train, y_test, y_pred, history = build_model_bert(Y, hyper_params_bert, metrics=[precision_m, recall_m, f1_m,])
+
+    model, bertx_train, bertx_test, elmox_train, elmox_test, glovex_train, glovex_test, y_train, y_test, y_pred, history = build_model_triple(Y, hyper_params_bert, metrics=[precision_m, recall_m, f1_m,]) 
 
     from ploting import plot_metrics
     plot_metrics(history)
-    return X_test, y_test, y_pred, history
+    return y_test, y_pred, history
 
     # try:
     #     evaluate2(y_test, y_pred)

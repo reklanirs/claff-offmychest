@@ -151,3 +151,38 @@ def keras_bert_dual(hyper_params):
     # print the model summary
     print(model.summary())
     return model
+
+
+
+def keras_bert_triple(hyper_params):
+    conv_filters = 512
+    conv_kernel = 10
+    conv_strides = 1
+
+    bert_input = keras.Input(shape=(34, 1024), dtype='float', name='trainable_bert_input')
+
+    elmo_input = keras.Input(shape=(34, 1024), dtype='float', name='trainable_elmo_input')
+
+    glove_input = keras.Input(shape=(34, 200), dtype='float', name='trainable_glove_input')
+
+    conv = [keras.layers.Conv1D(filters=conv_filters, kernel_size=conv_kernel, strides=conv_strides, padding='same', activation=hyper_params['activation'])(i)  for i in (bert_input, elmo_input, glove_input)]
+    avg_pool = [AveragePooling1D(pool_size=2, strides=None, padding='valid', data_format='channels_last')(i) for i in conv]
+    max_pool = [MaxPooling1D(pool_size=2, strides=None, padding='valid', data_format='channels_last')(i) for i in conv]
+    conc3 = [concatenate([i,j]) for i,j in zip(avg_pool, max_pool)]
+    flat = [Flatten()(i) for i in conc3]
+
+    conc = concatenate(flat)
+
+    hidden1 = Dense(512, activation=hyper_params['activation'], name='hidden1')(conc)
+
+    # dense = [CustomizedDenseLayer(output_dim=32)(conc) for _ in range(hyper_params['T'])]  #? what is remove this layer completedly
+    dense = [Dense(64, activation=hyper_params['activation'], name='dense_'+labels[i])(hidden1) for i in range(hyper_params['T'])]  #? what is remove this layer completedly
+    # dense = ''
+
+    output = [ Dense(1, activation='sigmoid', name=labels[i])(lyer) for i,lyer in enumerate(dense)]
+    # output = [ Dense(1, activation='sigmoid' if hyper_params['isDataBinary'] else hyper_params['activation'])(flat) for _ in range(hyper_params['T'])]
+
+    model = keras.Model(inputs=[bert_input, elmo_input, glove_input], outputs=output) #? Loss shift to a specific task during training?
+    # print the model summary
+    print(model.summary())
+    return model
