@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*- 
 
 from header import *
+from file_reader import *
 
 from model_basic import *
 from model_elmo import *

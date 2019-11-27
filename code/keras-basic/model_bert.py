@@ -31,14 +31,14 @@ def keras_bert(hyper_params):
     input_text = keras.Input(shape=hyper_params['input_shape'], dtype='float', name='trainable_input')
 
     if len(hyper_params['input_shape']) == 2:
-        # conv = keras.layers.Conv1D(filters=512, kernel_size=10, strides=1, padding='same', activation=hyper_params['activation'])(input_text)
-        flat = Bidirectional(LSTM(512))(input_text)
+        conv = keras.layers.Conv1D(filters=512, kernel_size=10, strides=1, padding='same', activation=hyper_params['activation'])(input_text)
+        # flat = Bidirectional(LSTM(512))(input_text)
         # conv = Bidirectional(GRU(512, return_sequences=True))(input_text)
 
-        # avg_pool = AveragePooling1D(pool_size=2, strides=None, padding='valid', data_format='channels_last')(conv)
-        # max_pool = MaxPooling1D(pool_size=2, strides=None, padding='valid', data_format='channels_last')(conv)
-        # x = concatenate([avg_pool, max_pool])
-        # flat = Flatten(name='flat')(x)
+        avg_pool = AveragePooling1D(pool_size=2, strides=None, padding='valid', data_format='channels_last')(conv)
+        max_pool = MaxPooling1D(pool_size=2, strides=None, padding='valid', data_format='channels_last')(conv)
+        x = concatenate([avg_pool, max_pool])
+        flat = Flatten(name='flat')(x)
     elif len(hyper_params['input_shape']) == 1:
         flat = Dense(512, activation=hyper_params['activation'], name='Dense')(input_text)
 
@@ -168,10 +168,24 @@ def keras_bert_triple(hyper_params):
     conv = [keras.layers.Conv1D(filters=conv_filters, kernel_size=conv_kernel, strides=conv_strides, padding='same', activation=hyper_params['activation'])(i)  for i in (bert_input, elmo_input, glove_input)]
     avg_pool = [AveragePooling1D(pool_size=2, strides=None, padding='valid', data_format='channels_last')(i) for i in conv]
     max_pool = [MaxPooling1D(pool_size=2, strides=None, padding='valid', data_format='channels_last')(i) for i in conv]
-    conc3 = [concatenate([i,j]) for i,j in zip(avg_pool, max_pool)]
-    flat = [Flatten()(i) for i in conc3]
+    conc1 = [concatenate([i,j]) for i,j in zip(avg_pool, max_pool)]
+    flat_1 = [Flatten()(i) for i in conc1]
 
-    conc = concatenate(flat)
+    blstm = [Bidirectional(LSTM(256))(i) for i in (bert_input, elmo_input, glove_input)]
+    # avg_pool_2 = [AveragePooling1D(pool_size=2, strides=None, padding='valid', data_format='channels_last')(i) for i in blstm]
+    # max_pool_2 = [MaxPooling1D(pool_size=2, strides=None, padding='valid', data_format='channels_last')(i) for i in blstm]
+    # conc2 = [concatenate([i,j]) for i,j in zip(avg_pool_2, max_pool_2)]
+    flat_2 = blstm
+    
+    bgru = [Bidirectional(GRU(128, return_sequences=True))(i)  for i in (bert_input, elmo_input, glove_input)]
+    avg_pool_3 = [AveragePooling1D(pool_size=2, strides=None, padding='valid', data_format='channels_last')(i) for i in bgru]
+    max_pool_3 = [MaxPooling1D(pool_size=2, strides=None, padding='valid', data_format='channels_last')(i) for i in bgru]
+    conc3 = [concatenate([i,j]) for i,j in zip(avg_pool_3, max_pool_3)]
+    flat_3 = [Flatten()(i) for i in conc3]
+    
+
+    conc123 = [concatenate(i) for i in (flat_1, flat_2, flat_3)]
+    conc = concatenate(conc123)
 
     hidden1 = Dense(512, activation=hyper_params['activation'], name='hidden1')(conc)
 

@@ -43,8 +43,8 @@ hyper_params = {
 hyper_params_bert = {
     'learning_rate': 1e-4,
     'maxlen': 34,
-    'epochs': 30,
-    'batch_size': 4096, # 8616
+    'epochs': 5,
+    'batch_size': 1024, # 8616
     'T': len(labels),
     'optimizer': 'adam',
     'loss': 'binary_crossentropy',
