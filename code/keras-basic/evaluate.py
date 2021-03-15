@@ -20,7 +20,7 @@ def general_evaluate(y_true, y_pred):
     return
 
 
-def binary_evaluate(y_true, y_pred, isDataBinary=False, thredhold=1):
+def binary_evaluate(y_true, y_pred, isDataBinary=False, thredhold=1, labels=labels):
     # f1_score, accuracy_score, precision_score, recall_score, classification_report, roc_auc_score
     f1,acc,auc,preci,recall = [],[],[],[],[]
     if isDataBinary:

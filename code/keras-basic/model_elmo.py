@@ -173,7 +173,8 @@ def keras_elmo(hyper_params):
         conv = Bidirectional(GRU(100, return_sequences=True))(nonmasking)
         #Output_dim: [None, 50, 64]
 
-    # bn = keras.layers.BatchNormalization(axis=-1)(conv) #1 if hyper_params['elmo_tag'] == 'default' else 2
+    bn = keras.layers.BatchNormalization(axis=-1)(conv) #1 if hyper_params['elmo_tag'] == 'default' else 2
+    
     drop = keras.layers.Dropout(hyper_params['dropout_rate'])(conv)
     print('drop.shape', drop.get_shape())
     #Output_dim: [None, 50, 64]

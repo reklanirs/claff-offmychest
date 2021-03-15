@@ -24,6 +24,15 @@ def read_data(data_path, clean=True, DEBUG = False):
         X,Y = clean_data(X,Y)
     return X,Y
 
+def read_liwc(data_path='/Users/reklanirs/Dropbox/Experiment/claff-offmychest/data/training data/LIWC2015 Results (labeled_training_set.csv).csv', normalize=True):
+    print('\n## read_liwc from {}'.format(data_path))
+    df = pd.read_csv(data_path, header=0)
+    df = np.array(df[df.columns[df.columns.get_loc('WC'):-1]])
+    print('liwc shape: {}'.format(df.shape))
+    if normalize:
+        df = sklearn.preprocessing.normalize(df, norm='max', axis=0)  # If 1, independently normalize each sample, otherwise (if 0) normalize each feature.
+    return df
+
 def read_pickle(filename):
     with open( os.path.join(root_folder, 'data/pickle/', filename),"rb") as pickle_in:
         ret = pickle.load(pickle_in)
@@ -61,3 +70,26 @@ def clean_data(X,Y):
             cleaned += 1
     print('Cleaned data number: {}\nNumber of data after cleaning: {}\n'.format(cleaned, len(x)))
     return x,y
+
+
+
+def read_wtest_pickle(f):
+    # return indx,y_test_list,y_pred_list,history_list
+    # indx: max finished fold, start with 0
+    if not f.endswith('.pickle'):
+        f = f.strip() + '.pickle'
+    try:
+        with open(f, 'rb') as fin:
+            x = pickle.load(fin)
+    except Exception as e:
+        print('Pickle not exist. Return default value.')
+        x = (-1,[],[])
+    return x
+
+
+def save_wtest_pickle(x,f):
+    if not f.endswith('.pickle'):
+        f = f.strip() + '.pickle'
+    with open(f, 'wb') as fout:
+        pickle.dump(x,fout)
+    pass

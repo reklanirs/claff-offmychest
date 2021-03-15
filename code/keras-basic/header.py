@@ -1,18 +1,24 @@
 '''
-pip install tensorflow-hub pandas pysnooper sklearn 
+pip install tensorflow-hub pandas pysnooper sklearn pytablewriter matplotlib seaborn
 '''
 
 import os,re,sys,time,datetime,pathlib,platform
 import math,random
+from math import floor,ceil
 import subprocess,shlex
+import multiprocessing
 import unicodedata,pickle,json
 import scipy.io as sio
 import numpy as np
 import tensorflow as tf
 import tensorflow_hub as hub
+# from numba import cuda
+# import ray
+# import inspect
 
 import keras
-from tensorflow.keras import backend as K
+# from tensorflow.keras import backend as K
+from keras import backend as K
 
 # from tensorflow import keras
 # from tensorflow.keras import backend as K
@@ -20,8 +26,9 @@ from tensorflow.keras import backend as K
 # from tensorflow.keras.layers import Layer
 
 
-from keras.layers import Input, Flatten, Lambda, Masking, Activation, LeakyReLU, PReLU
-from keras.layers import Conv2D, Dense, Dropout, Embedding, LSTM, Bidirectional
+from keras.layers import Input, Flatten, Lambda, Masking, Activation, LeakyReLU, PReLU, Softmax, BatchNormalization
+from keras.layers import Conv2D, Dense, Dropout, Embedding, LSTM, Bidirectional, CuDNNGRU, Conv1D
+from keras.constraints import NonNeg, MaxNorm, MinMaxNorm, max_norm
 from keras.models import Model
 from keras import regularizers
 import keras.layers as layers
@@ -31,6 +38,8 @@ import pysnooper
 
 
 import pandas as pd
+import sklearn
+
 #import nltk
 from tensorflow.keras.preprocessing.text import text_to_word_sequence
 # from sklearn.model_selection import StratifiedShuffleSplit
@@ -50,6 +59,10 @@ from tensor_trace_norm import TensorTraceNorm
 from keras.layers import SpatialDropout1D, concatenate
 from keras.layers import GRU, Bidirectional, GlobalAveragePooling1D, GlobalMaxPooling1D, AveragePooling1D, MaxPooling1D
 
+from keras_self_attention import SeqSelfAttention
+from keras_multi_head import MultiHead
+from keras_multi_head import MultiHeadAttention
+
 
 from keras.backend.tensorflow_backend import set_session
 config = tf.compat.v1.ConfigProto()
@@ -67,11 +80,16 @@ def get_script_path():
 root_folder = "C:/Users/kanoto/Dropbox/Experiment/claff-offmychest" if platform.system() == 'Windows' else '/Users/reklanirs/Dropbox/Experiment/claff-offmychest/'
 # root_folder = get_script_path()
 
-# labels = ['Support']
-# labels = ['General_support']
-# labels = ['Emotional_disclosure','Information_disclosure']
-labels = ['Emotional_disclosure','Information_disclosure','Support','General_support','Info_support','Emo_support']
+labels = ['Info_support']
+# labels = ['Emotional_disclosure', 'Information_disclosure']
+# labels = ['Emotional_disclosure','Information_disclosure','Support','General_support','Info_support','Emo_support']
 all_labels = ['Emotional_disclosure','Information_disclosure','Support','General_support','Info_support','Emo_support']
+
+labeled_testset_labels = ['sentenceid','full_text','SharedTask_Emotional_disclosure','SharedTask_Information_disclosure','SharedTask_Emo_support','SharedTask_Info_support','Emotional_disclosure','Information_disclosure','Emo_support','Info_support']
+
+label_len = [3948, 4891, 3226, 680, 1250, 1006]
+label_len_shrinked = [3916,4869,3200,651,1214,999]
+label_set = {i:j for i,j in zip(all_labels,label_len)}
 
 unicode_map = {'<U+0096>':'–', '<U+00AB>':'«', '<U+21E2>':'⇢', '<U+200B>':'', '<U+0093>':'“', '<U+263A>':'', '<U+00B4>':'☺', '<U+4EBA>':'人', '<U+0097>':'—', '<U+97F3>':'音', '<U+0091>':'‘', '<U+0092>':'’', '<U+0094>':'”', '<U+FE0F>':'', '<U+00B0>':'°', '<U+00BB>':'»', '<U+2764>':'❤', '<U+0085>':'', '<U+00B7>':'…', '<U+0001F':'', '<U+2665>':'♥'}
 
@@ -120,11 +138,30 @@ from keras.backend import sigmoid
 def swish(x, beta = 1):
     return (x * sigmoid(beta * x))
 
+def gelu(x):
+    """Gaussian Error Linear Unit.
+    This is a smoother version of the RELU.
+    Original paper: https://arxiv.org/abs/1606.08415
+    Args:
+        x: float Tensor to perform activation.
+    Returns:
+        `x` with the GELU activation applied.
+    """
+    cdf = 0.5 * (1.0 + tf.tanh(
+        (np.sqrt(2 / np.pi) * (x + 0.044715 * tf.pow(x, 3)))))
+    return x * cdf
+
+# def gelu(x):
+#     return 0.5*x*(1+tf.tanh(np.sqrt(2/np.pi)*(x+0.044715*tf.pow(x, 3))))
+
 from keras.utils.generic_utils import get_custom_objects
 from keras.layers import Activation
 get_custom_objects().update({'swish': Activation(swish)})
+get_custom_objects().update({'gelu': Activation(gelu)})
 
 get_custom_objects().update({'leaky_relu': Activation(LeakyReLU(alpha=0.05))})
+
+
 
 
 
@@ -137,6 +174,8 @@ def markdown_output(xheader, yheader, matrix, table_name=None):
     writer.write_table()
     return writer
 
+def sigmoid(x):
+  return 1 / (1 + math.exp(-x))
 
 def f1_metric(y_true, y_pred):
     def recall(y_true, y_pred):
@@ -167,6 +206,7 @@ def f1_metric(y_true, y_pred):
     precision = precision(y_true, y_pred)
     recall = recall(y_true, y_pred)
     return 2*((precision*recall)/(precision+recall+K.epsilon()))
+
 
 
 
@@ -229,3 +269,5 @@ def f1_m(y_true, y_pred):
     precision = precision_m(y_true, y_pred)
     recall = recall_m(y_true, y_pred)
     return 2*((precision*recall)/(precision+recall+K.epsilon()))
+
+

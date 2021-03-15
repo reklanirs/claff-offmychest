@@ -78,3 +78,25 @@ def keras_basic_conv(hparam):
     # print the model summary
     print(model.summary())
     return model
+
+
+def keras_basic_bert(hyper_params):
+    input_text = keras.Input(shape=hyper_params['input_shape'], dtype='float', name='trainable_input')
+
+    dense1 = Dense(512, activation=hyper_params['activation'], input_shape=(34, 1024,))(input_text)
+    dense2 = Dense(256, activation=hyper_params['activation'], input_shape=(34, 512,))(dense1)
+    flat = Flatten(name='flat')(dense2)
+    hidden1 = Dense(2048, activation=hyper_params['activation'], name='hidden1')(flat)
+
+    dense3 = [Dense(512, activation=hyper_params['activation'], name='dense3_'+labels[i])(hidden1) for i in range(hyper_params['T'])]
+    # dense = [CustomizedDenseLayer(output_dim=32)(conc) for _ in range(hyper_params['T'])]  #? what is remove this layer completedly
+    dense = [Dense(128, activation=hyper_params['activation'], name='dense_'+labels[i])(l) for i,l in enumerate(dense3)]  #? what is remove this layer completedly
+    # dense = ''
+
+    output = [ Dense(1, activation='sigmoid', name=labels[i])(lyer) for i,lyer in enumerate(dense)]
+    # output = [ Dense(1, activation='sigmoid' if hyper_params['isDataBinary'] else hyper_params['activation'])(flat) for _ in range(hyper_params['T'])]
+
+    model = keras.Model(inputs=input_text, outputs=output) #? Loss shift to a specific task during training?
+    # print the model summary
+    print(model.summary())
+    return model
