@@ -1,103 +1,93 @@
 # claff-offmychest
 
-> [CL-Aff Shared Task] Happiness Ingredients Detection using Multi-Task Deep Learning
+> [CL-Aff Shared Task] Detecting Disclosure and Support via Deep Multi-Task Learning
 
 We propose a novel way of deploying deep multi-task learning models for the task of detecting disclosure and support. We calculate all possible logical relations among six labels, represented in a Venn diagram. Based on it, the six labels are distributed to multiple fragment clusters. Then, a multi-task deep neural network is built on the groups.
 
 
 
-## Task Primary labels and an auxilary label
+## Task labels and description
 
-- Task A (label Agency) Binary label describing whether or not the author is in control.
+- **Label group Disclosure**
 
-- Task B (label Social) Binary label describing whether or not this happy moment involve people other than the author.
+1. ***Information_disclosure***: Comment contains personal information of author or people author mentioned
 
-- Task C (label Concept) Auxiliary task. Concepts can have up to 15 possible values, and each happy moment can have multiple (up to 4) values.
+2. ***Emotion_disclosure***: Comment contains author’s positive or negative feelings 
 
+  
 
+- **Label group Supportiveness**
 
-## Preprocessing steps
+1. ***Support***: Comment offers support to someone
 
-- Split the sentences into word lists and omit all punctuation marks.
+2. ***General_support***: Comment offers general support through quotes or catch phrases
 
-- Transform the sentences into sequences and pad them to become of the same length.
+3. ***Info_support***: Comment offers specific information, practical advice or suggesting a course of action
 
-- Categorise Agency, Social, and Concepts.
-
-Example:
-
-| **Moment description**                   | **As I was walking to retrieve the  mail, I saw a neighbor walking their adorable dog.** |
-| ---------------------------------------- | ------------------------------------------------------------ |
-| **Agency**                               | Yes                                                          |
-| **Social**                               | Yes                                                          |
-| **Concept**                              | animals  \| exercise                                         |
-| **After splitting:**                     | ['As',  'I', 'was', 'walking', 'to', 'retrieve', 'the', 'mail', 'I', 'saw', 'a',  'neighbor', 'walking', 'their', 'adorable', 'dog'] |
-| **Assign each word a** **number:**       | {'I': 1, 'their': 2, 'walking': 3,  'mail': 4, 'saw': 5, 'was': 6, 'to': 7, 'a': 8, 'neighbor': 9, 'retrieve':  10, 'dog': 11, 'adorable': 12, 'the': 13, 'As': 14} |
-| **Transform and padding** **ahead****:** | [0,  0, 0, 0, 14, 1, 6, 3, 7, 10, 13, 4, 1, 5, 8, 9, 3, 2, 12, 11] |
-| **Categorise Concepts:**                 | (assume: animals, education,  exercise, food, party)  10100  |
+4. ***Emo_support***: Comment offers sympathy, caring or encouragement
 
 
 
-## Deep Neural Network Model
+## Data Preprocessing
 
-**Structure from bottom to top** :
+#### Data Distribution
 
-- Embedding Layer.  (Initialized with GloVe)
-- 1D Convolutional Layer.
-- Hard Parameter sharing Multi-task Learning Layers.
+| **Label**                  | **True** | **False** |
+| -------------------------- | -------- | --------- |
+| **Emotion_disclosure**     | 3948     | 8912      |
+| **Information_disclosure** | 4891     | 7969      |
+| **Support**                | 3226     | 9634      |
+| **General_support**        | 680      | 12180     |
+| **Info_support**           | 1250     | 11610     |
+| **Emo_support**            | 1006     | 11854     |
 
+#### Venn graph (for group Supportiveness)
 
-
-## **Experiments and Results**
-
-##### Accuracies for Task A (Agency) and Task B (Social) on training data (split into 60% training, 20% validation, 20% test)
-
-| **Model**                         | **Task  A** | **Task  B** |
-| --------------------------------- | ----------- | ----------- |
-| **CNN**                           | 71.2%       | 77.0%       |
-| **CNN  + MTL**                    | 80.4%       | 85.8%       |
-| **CNN  + MTL + GloVe (fixed)**    | 83.1%       | 87.6%       |
-| **CNN + MTL + GloVe (trainable)** | 83.5%       | 89.2%       |
+![image-20210314225325724](README.assets/image-20210314225325724.png)
 
 
 
-##### Precisions for Task A (Agency) and Task B (Social) on training data
+## Neural Network Model
 
-| **Model**                         | **Task  A** | **Task  B** |
-| --------------------------------- | ----------- | ----------- |
-| **CNN**                           | 0.664       | 0.799       |
-| **CNN  + MTL**                    | 0.759       | 0.860       |
-| **CNN  + MTL + GloVe (fixed)**    | 0.815       | 0.876       |
-| **CNN + MTL + GloVe (trainable)** | 0.813       | 0.892       |
+### BERT embedding
 
+Via bert-as-service. For the training data (12860 entries), two output shapes.
 
+- Default:   (12860 × 1024)
 
-##### Recalls for Task A (Agency) and Task B (Social) on training data
+- Elmo like: (12860 × 34 × 1024)
 
-| **Model**                         | **Task  A** | **Task  B** |
-| --------------------------------- | ----------- | ----------- |
-| **CNN**                           | 0.689       | 0.778       |
-| **CNN  + MTL**                    | 0.744       | 0.856       |
-| **CNN  + MTL + GloVe (fixed)**    | 0.744       | 0.876       |
-| **CNN + MTL + GloVe (trainable)** | 0.756       | 0.893       |
+### Fragment layers based on the Venn graph
+
+The bottom large dense layer is split into several parts (fragment layer). On top are territories of four labels: label-corresponding task-specific layers will only connect to their specific territories (neurons).
+
+![image-20210314225510255](README.assets/image-20210314225510255.png)
 
 
 
-##### F1 scores for Task A (Agency) and Task B (Social) on training data
+### Model Structure:
 
-| **Model**                         | **Task  A** | **Task  B** |
-| --------------------------------- | ----------- | ----------- |
-| **CNN**                           | 0.670       | 0.767       |
-| **CNN  + MTL**                    | 0.751       | 0.857       |
-| **CNN  + MTL + GloVe (fixed)**    | 0.767       | 0.876       |
-| **CNN + MTL + GloVe (trainable)** | 0.776       | 0.892       |
+![image-20210314225532529](README.assets/image-20210314225532529.png)
+
+
+
+## Experiments and Results
+
+Results for *Discolsure* and *Supportiveness* on 20% of the training data that we set aside for testing. Input data shape (12860 × 34 × 1024)
+
+| **Label**                  | **accuracy** | **precision** | **recall** | **F1** |
+| -------------------------- | ------------ | ------------- | ---------- | ------ |
+| **Emotion_disclosure**     | 0.6847       | 0.4902        | 0.7133     | 0.5811 |
+| **Information_disclosure** | 0.7012       | 0.6110        | 0.6215     | 0.6162 |
+| **Support**                | 0.8233       | 0.6213        | 0.7436     | 0.6770 |
+| **General_support**        | 0.9272       | 0.3023        | 0.2902     | 0.2961 |
+| **Info_support**           | 0.8772       | 0.4177        | 0.6181     | 0.4986 |
+| **Emo_support**            | 0.9284       | 0.4920        | 0.5151     | 0.5033 |
+| **Macro scores**           | 0.8236       | 0.4890        | 0.5836     | 0.5287 |
 
 
 
 ## Conclusion
 
-Multi-task learning gets good results as it lowers the risk of overfitting on each task;
-
-Task B achieves better results than Task A because the latter has unbalanced training data;
-
-With trainable embeddings initialized with GloVe, the deep neural network can get better results.
+Multi-task learning with BERT embedding and fragment layers gets reasonable results on most of the labels. 
+They are the worst on the label General_support due to the high imbalance.
